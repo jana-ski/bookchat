@@ -1,76 +1,237 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BookChat</title>
     <style>
+        :root {
+            --primary-color: #2196F3;
+            --background-color: #f5f5f5;
+            --text-color: #333;
+            --border-color: #ddd;
+            --hover-color: #1976D2;
+            --error-color: #f44336;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .chat-container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
-        #chat-container {
-            border: 1px solid #ccc;
-            padding: 20px;
+
+        .message-area {
             height: 400px;
             overflow-y: auto;
-            margin-bottom: 20px;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
         }
-        #message-input {
-            width: 80%;
+
+        .message {
+            margin-bottom: 15px;
             padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border-left: 3px solid var(--primary-color);
         }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .content {
+            line-height: 1.4;
+        }
+
+        .github-link {
+            display: inline-block;
+            margin-top: 5px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .github-link:hover {
+            color: var(--hover-color);
+            text-decoration: underline;
+        }
+
+        .input-area {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        #message-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+        }
+
         #send-button {
             padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        #send-button:hover {
+            background-color: var(--hover-color);
+        }
+
+        #send-button:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+        }
+
+        #error {
+            color: var(--error-color);
+            text-align: center;
+            padding: 10px;
+            min-height: 20px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .input-area {
+                flex-direction: column;
+            }
+
+            #send-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>BookChat</h1>
-    <div id="chat-container"></div>
-    <input type="text" id="message-input" placeholder="Type your message...">
-    <button id="send-button">Send</button>
-
+    <div class="chat-container">
+        <div id="message-area" class="message-area"></div>
+        <div id="error"></div>
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="Type your message...">
+            <button id="send-button" disabled>Send</button>
+        </div>
+    </div>
     <script>
-        document.getElementById('send-button').onclick = async function() {
-            const input = document.getElementById('message-input');
-            const message = input.value;
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const messageArea = document.getElementById('message-area');
+        const errorElement = document.getElementById('error');
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
             if (!message) return;
 
-            // Add user message to chat
-            addMessage('User: ' + message);
-            input.value = '';
-
             try {
+                sendButton.disabled = true;
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ message }),
+                    body: JSON.stringify({ message })
                 });
-                const data = await response.json();
-                addMessage('Server: ' + data.response);
-            } catch (error) {
-                addMessage('Error: Failed to send message');
-                console.error('Error:', error);
-            }
-        };
 
-        function addMessage(text) {
-            const container = document.getElementById('chat-container');
-            const messageDiv = document.createElement('div');
-            messageDiv.textContent = text;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+                const data = await response.json();
+                
+                if (data.status === 'error') {
+                    throw new Error(data.message);
+                }
+
+                // Add message to display
+                addMessage(message, data.github_url);
+                messageInput.value = '';
+                errorElement.textContent = '';
+            } catch (error) {
+                errorElement.textContent = `Error: ${error.message}`;
+            } finally {
+                sendButton.disabled = false;
+            }
         }
 
-        // Allow sending message with Enter key
-        document.getElementById('message-input').addEventListener('keypress', function(e) {
+        function addMessage(content, githubUrl) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            const timestamp = document.createElement('div');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleString();
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'content';
+            messageContent.textContent = content;
+
+            messageDiv.appendChild(timestamp);
+            messageDiv.appendChild(messageContent);
+
+            if (githubUrl) {
+                const link = document.createElement('a');
+                link.href = githubUrl;
+                link.target = '_blank';
+                link.textContent = 'View on GitHub';
+                link.className = 'github-link';
+                messageDiv.appendChild(link);
+            }
+
+            messageArea.appendChild(messageDiv);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                document.getElementById('send-button').click();
+                sendMessage();
             }
         });
+
+        // Load existing messages
+        async function loadMessages() {
+            try {
+                const response = await fetch('/messages');
+                const data = await response.json();
+                
+                if (data.messages) {
+                    messageArea.innerHTML = ''; // Clear existing messages
+                    data.messages.forEach(msg => {
+                        addMessage(msg.message, msg.github_url);
+                    });
+                }
+            } catch (error) {
+                errorElement.textContent = `Error loading messages: ${error.message}`;
+            }
+        }
+
+        // Load messages when page loads
+        loadMessages();
     </script>
 </body>
 </html>

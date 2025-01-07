@@ -1,2 +1,5 @@
-PyGithub==2.1.1
+Flask==2.0.1
 pytest==7.4.3
+python-dotenv==0.19.0
+PyGithub==1.55
+requests==2.26.0
