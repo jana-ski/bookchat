@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BookChat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #chat-container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        #message-input {
+            width: 80%;
+            padding: 10px;
+        }
+        #send-button {
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>BookChat</h1>
+    <div id="chat-container"></div>
+    <input type="text" id="message-input" placeholder="Type your message...">
+    <button id="send-button">Send</button>
+
+    <script>
+        document.getElementById('send-button').onclick = async function() {
+            const input = document.getElementById('message-input');
+            const message = input.value;
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage('User: ' + message);
+            input.value = '';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message }),
+                });
+                const data = await response.json();
+                addMessage('Server: ' + data.response);
+            } catch (error) {
+                addMessage('Error: Failed to send message');
+                console.error('Error:', error);
+            }
+        };
+
+        function addMessage(text) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = text;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Allow sending message with Enter key
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('send-button').click();
+            }
+        });
+    </script>
+</body>
+</html>
